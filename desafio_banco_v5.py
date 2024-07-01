@@ -46,10 +46,10 @@ class Cliente:
         self.contas = []
         self.indice_conta = 0
     def realizar_transacao(self, conta, transacao):
-        lim_diario = 0
-        date_now = datetime.now().strftime("%d/%m/%Y - %H:%M:%S.")
-        #TODO validar o numero de transacoes e invalidar a operacao se for necessario
-        # print vc excedeu n de transacoes por hoje
+        if len(conta.historico.transacoes_do_dia()) >= 2:
+            print("\n Você excedeu o número de transações diarias")
+            return
+        
         transacao.registrar(conta)
 
     def adicionar_conta(self, conta):
@@ -168,7 +168,7 @@ class Historico:
             {
                 "tipo": transacao.__class__.__name__,
                 "valor": transacao.valor,
-                "data": datetime.now().strftime("%d/%m/%Y, %H:%M:%S"),
+                "data": datetime.now().strftime("%d/%m/%Y - %H:%M:%S"),
             }
         )
         
@@ -177,8 +177,14 @@ class Historico:
             if tipo_transacao is None or transacao["tipo"].lower() == tipo_transacao.lower():
                 yield transacao
 
-    def transacoes_do_dia(self): #TODO filtrar todas as transacoes realizadas no dia
-        pass
+    def transacoes_do_dia(self): # filtrar todas as transacoes realizadas no dia
+        data_atual = datetime.now().date()
+        transacoes = []
+        for transacao in self._transacoes:
+            data_transacao = datetime.strptime(transacao["data"], "%d/%m/%Y - %H:%M:%S").date()
+            if data_atual == data_transacao:
+                transacoes.append(transacao)
+        return transacoes
 
 
 class Transacao(ABC):
@@ -284,7 +290,6 @@ def sacar(clientes):
 
 @log_transacao
 def exibir_extrato(clientes):
-    now = datetime.now().strftime("%d/%m/%Y, %H:%M:%S.")
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
 
@@ -301,7 +306,7 @@ def exibir_extrato(clientes):
  
     for transacao in conta.historico.gerar_relatorio(tipo_transacao=None):
         tem_transacao = True
-        extrato += f"\n{transacao['tipo']}:\n\tR$ {transacao['valor']:.2f} - {now}\n"
+        extrato += f"\n{transacao['data']}\n{transacao['tipo']}:\n\tR$ {transacao['valor']:.2f}\n"
     
     if not tem_transacao:
         extrato = "Não foram realizadas movimentações"
